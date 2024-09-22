@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR 코드 관리자</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>QR 코드 관리자</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('list_qr_codes') }}">QR 코드 목록</a></li>
+                <li><a href="{{ url_for('register') }}">QR 코드 등록</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>&copy; 2024 QR 코드 관리자</p>
+    </footer>
+</body>
+</html>

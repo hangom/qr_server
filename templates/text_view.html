@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>텍스트 내용</h1>
+<pre>{{ text }}</pre>
+<a href="{{ url_for('list_qr_codes') }}" class="btn btn-primary">목록으로 돌아가기</a>
+{% endblock %}

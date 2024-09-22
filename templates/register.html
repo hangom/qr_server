@@ -4,16 +4,128 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR 코드 등록</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        a {
+            display: inline-block;
+            margin-top: 15px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
     <h1>QR 코드 등록</h1>
-    <form action="{{ url_for('register') }}" method="post">
+    <form action="{{ url_for('register') }}" method="post" enctype="multipart/form-data">
         <label for="title">제목:</label>
         <input type="text" id="title" name="title" required><br><br>
-        <label for="url">URL:</label>
-        <input type="url" id="url" name="url" required><br><br>
+        
+        <label for="data_type">데이터 형식:</label>
+        <select id="data_type" name="data_type" onchange="showDataInput()">
+            <option value="URL">URL</option>
+            <option value="Image">이미지</option>
+            <option value="FILE">파일</option>
+            <option value="Text">텍스트</option>
+        </select><br><br>
+        
+        <div id="url_input">
+            <label for="url">URL:</label>
+            <input type="url" id="url" name="url"><br><br>
+        </div>
+        
+        <div id="file_input" style="display:none;">
+            <label for="file">파일:</label>
+            <input type="file" id="file" name="file">
+            <p id="allowed_extensions" style="display:none;">허용된 파일 형식: {{ ', '.join(allowed_extensions) | upper }}</p>
+        </div>
+        
+        <div id="text_input" style="display:none;">
+            <label for="text">텍스트:</label>
+            <textarea id="text" name="text" rows="4" cols="50"></textarea><br><br>
+        </div>
+        
         <input type="submit" value="QR 코드 생성">
     </form>
+
+    <script>
+    function showDataInput() {
+        var dataType = document.getElementById("data_type").value;
+        document.getElementById("url_input").style.display = "none";
+        document.getElementById("file_input").style.display = "none";
+        document.getElementById("text_input").style.display = "none";
+        document.getElementById("allowed_extensions").style.display = "none";
+
+        if (dataType === "URL") {
+            document.getElementById("url_input").style.display = "block";
+        } else if (dataType === "Image") {
+            document.getElementById("file_input").style.display = "block";
+        } else if (dataType === "FILE") {
+            document.getElementById("file_input").style.display = "block";
+            document.getElementById("allowed_extensions").style.display = "block";
+        } else if (dataType === "Text") {
+            document.getElementById("text_input").style.display = "block";
+        }
+    }
+
+    var allowedExtensions = {{ allowed_extensions | tojson }};
+
+    document.getElementById('file').addEventListener('change', function(e) {
+        var file = e.target.files[0];
+        var fileExtension = file.name.split('.').pop().toLowerCase();
+        
+        if (!allowedExtensions.includes(fileExtension)) {
+            alert('허용되지 않는 파일 형식입니다. 허용된 형식: ' + allowedExtensions.join(', ').toUpperCase());
+            this.value = ''; // 파일 선택 초기화
+        }
+    });
+    </script>
     <br>
     <a href="{{ url_for('list_qr_codes') }}">QR 코드 목록 보기</a>
 </body>

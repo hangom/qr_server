@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR 코드 관리 시스템</title>
+    <title>QR 코드 생성기</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -47,10 +47,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>QR 코드 관리 시스템</h1>
+        <h1>QR 코드 생성기</h1>
         <ul>
-            <li><a href="{{ url_for('register') }}">QR 코드 등록</a></li>
-            <li><a href="{{ url_for('list_qr') }}">QR 코드 목록</a></li>
+            <li><a href="{{ url_for('register') }}">새 QR 코드 등록</a></li>
+            <li><a href="{{ url_for('list_qr_codes') }}">QR 코드 목록</a></li>
         </ul>
     </div>
 </body>

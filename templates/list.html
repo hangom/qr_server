@@ -6,93 +6,80 @@
     <title>QR 코드 목록</title>
     <style>
         table {
-            border-collapse: collapse;
             width: 100%;
+            border-collapse: collapse;
         }
         th, td {
-            border: 1px solid black;
+            border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
         }
         th {
             background-color: #f2f2f2;
         }
-        .alert {
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid transparent;
-            border-radius: 4px;
-        }
-        .alert-success {
-            color: #155724;
-            background-color: #d4edda;
-            border-color: #c3e6cb;
-        }
-        .alert-error {
-            color: #721c24;
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-        }
-        .qr-image {
-            width: 100px; /* QR 코드 이미지의 고정 너비 설정 */
-            height: auto;
-        }
-        .qr-cell {
-            width: 120px; /* QR 코드 셀의 너비 설정 */
-        }
-        .action-cell {
-            width: 240px; /* 작업 셀의 너비 설정 */
-        }
-        .btn {
-            display: inline-block;
-            padding: 5px 10px;
-            margin: 2px;
-            background-color: #f0f0f0;
-            border: 1px solid #ccc;
-            text-decoration: none;
-            color: #333;
-            font-size: 12px;
+        img {
+            max-width: 100px;
+            max-height: 100px;
         }
     </style>
 </head>
 <body>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-    
     <h1>QR 코드 목록</h1>
     <table>
-        <tr>
-            <th>제목</th>
-            <th>데이터</th>
-            <th class="qr-cell">QR 코드</th>
-            <th class="action-cell">작업</th>
-        </tr>
-        {% for qr in qr_codes %}
-        <tr>
-            <td>{{ qr.title }}</td>
-            <td>
-                <a href="{{ qr.url }}" target="_blank">{{ qr.url }}</a>
-            </td>
-            <td class="qr-cell">
-                <img src="data:image/png;base64,{{ qr.png_image }}" alt="QR Code" class="qr-image">
-            </td>
-            <td class="action-cell">
-                <a href="{{ url_for('download_qr', qr_id=qr._id, format='png') }}" class="btn">PNG 다운로드</a>
-                <a href="{{ url_for('download_qr', qr_id=qr._id, format='svg') }}" class="btn">SVG 다운로드</a>
-                <a href="{{ url_for('edit_qr', qr_id=qr._id) }}" class="btn">수정</a>
-                <form action="{{ url_for('delete_qr', qr_id=qr._id) }}" method="post" onsubmit="return confirm('정말로 이 QR 코드를 삭제하시겠습니까?');" style="display:inline;">
-                    <button type="submit" class="btn">삭제</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
+        <thead>
+            <tr>
+                <th>제목</th>
+                <th>타입</th>
+                <th>데이터</th>
+                <th>QR 코드</th>
+                <th>작업</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for qr in qr_codes %}
+            <tr>
+                <td>{{ qr.title }}</td>
+                <td>{{ qr.data_type }}</td>
+                <td>
+                    {% if qr.data_type == 'URL' %}
+                        <a href="{{ qr.data }}" target="_blank">{{ qr.data }}</a>
+                    {% elif qr.data_type == 'Text' %}
+                        {{ qr.data }}
+                    {% elif qr.data_type == 'Image' and qr.data.data %}
+                        <a href="data:{{ qr.data.mime_type }};base64,{{ qr.data.data }}" download="{{ qr.title }}.{{ qr.data.mime_type.split('/')[-1] }}">
+                            <img src="data:{{ qr.data.mime_type }};base64,{{ qr.data.data }}" alt="{{ qr.title }}" style="max-width: 100px; max-height: 100px;">
+                        </a>
+                    {% elif qr.data_type == 'FILE' and qr.data.filename %}
+                        <a href="{{ url_for('download_file', qr_id=qr._id) }}">{{ qr.data.filename }} 다운로드</a>
+                    {% else %}
+                        데이터를 표시할 수 없습니다.
+                    {% endif %}
+                </td>
+                <td>
+                    {% if qr.png_image %}
+                        <img src="data:image/png;base64,{{ qr.png_image }}" alt="QR 코드">
+                    {% else %}
+                        QR 코드 이미지 없음
+                    {% endif %}
+                </td>
+                <td>
+                    <form action="{{ url_for('download_qr', qr_id=qr._id, format='png') }}" method="GET" style="display:inline;">
+                        <button type="submit">PNG</button>
+                    </form>
+                    <form action="{{ url_for('download_qr', qr_id=qr._id, format='svg') }}" method="GET" style="display:inline;">
+                        <button type="submit">SVG</button>
+                    </form>
+                    <form action="{{ url_for('edit_qr', qr_id=qr._id) }}" method="GET" style="display:inline;">
+                        <button type="submit">수정</button>
+                    </form>
+                    <form action="{{ url_for('delete_qr', qr_id=qr._id) }}" method="POST" style="display:inline;">
+                        <button type="submit" onclick="return confirm('정말로 삭제하시겠습니까?');">삭제</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
-    <br>
-    <a href="{{ url_for('home') }}" class="btn">새 QR 코드 등록</a>
+    <p><a href="{{ url_for('register') }}">새 QR 코드 등록</a></p>
 </body>
 </html>
