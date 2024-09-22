@@ -215,24 +215,51 @@ def download_file(qr_id):
     flash('파일을 찾을 수 없습니다.', 'error')
     return redirect(url_for('list_qr_codes'))
 
-@app.route('/edit/<string:qr_id>', methods=['GET', 'POST'])
+@app.route('/edit/<qr_id>', methods=['GET', 'POST'])
 def edit_qr(qr_id):
-    qr_code = qr_collection.find_one({'_id': ObjectId(qr_id)})
-    if not qr_code:
+    qr = qr_collection.find_one({'_id': ObjectId(qr_id)})
+    if not qr:
         flash('QR 코드를 찾을 수 없습니다.', 'error')
         return redirect(url_for('list_qr_codes'))
 
     if request.method == 'POST':
-        title = request.form['title']
-        url = request.form['url']
-        qr_collection.update_one(
-            {'_id': ObjectId(qr_id)},
-            {'$set': {'title': title, 'url': url}}
-        )
-        flash('QR 코드가 성공으 수정되었습니다.', 'success')
+        title = request.form.get('title')
+        data_type = qr['data_type']
+
+        if data_type == 'URL':
+            data = request.form.get('url')
+        elif data_type == 'Text':
+            data = request.form.get('text')
+        elif data_type in ['Image', 'FILE']:
+            file = request.files.get('file')
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file_data = file.read()
+                mime_type = file.content_type
+                data = {
+                    'filename': filename,
+                    'data': base64.b64encode(file_data).decode('utf-8'),
+                    'mime_type': mime_type
+                }
+            else:
+                data = qr['data']  # 파일이 제공되지 않으면 기존 데이터를 유지합니다.
+
+        # QR 코드 이미지는 변경하지 않고 기존 이미지를 유지합니다.
+        png_image = qr['png_image']
+        svg_image = qr['svg_image']
+
+        # 데이터베이스 업데이트
+        qr_collection.update_one({'_id': ObjectId(qr_id)}, {'$set': {
+            'title': title,
+            'data': data,
+            'png_image': png_image,
+            'svg_image': svg_image
+        }})
+
+        flash('QR 코드가 수정되었습니다.', 'success')
         return redirect(url_for('list_qr_codes'))
 
-    return render_template('edit.html', qr=qr_code)
+    return render_template('edit_qr.html', qr=qr)
 
 @app.route('/qr/<qr_id>')
 def redirect_qr(qr_id):
@@ -243,7 +270,7 @@ def redirect_qr(qr_id):
 
     if qr_code['data_type'] == 'URL':
         return redirect(qr_code['data'])
-    elif qr_code['data_type'] in ['Image', 'FILE']:  # 여기를 수정
+    elif qr_code['data_type'] in ['Image', 'FILE']:
         file_data = qr_code['data']
         return send_file(
             io.BytesIO(base64.b64decode(file_data['data'])),
