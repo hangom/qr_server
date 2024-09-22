@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR 코드 목록</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .alert {
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .alert-error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <h1>QR 코드 목록</h1>
+    <table>
+        <tr>
+            <th>제목</th>
+            <th>데이터</th>
+            <th>QR 코드</th>
+            <th>작업</th>
+        </tr>
+        {% for qr in qr_codes %}
+        <tr>
+            <td>{{ qr.title }}</td>
+            <td>{{ qr.data }}</td>
+            <td><img src="data:image/png;base64,{{ qr.image }}" alt="QR Code"></td>
+            <td>
+                <form action="{{ url_for('delete_qr', qr_id=qr._id) }}" method="post" onsubmit="return confirm('정말로 이 QR 코드를 삭제하시겠습니까?');">
+                    <button type="submit">삭제</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    <br>
+    <a href="{{ url_for('home') }}">새 QR 코드 등록</a>
+</body>
+</html>
