@@ -1,7 +1,8 @@
-from flask import Flask, request, render_template, jsonify, redirect, url_for, flash
+from flask import Flask, request, render_template, redirect, url_for, flash, send_file
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import qrcode
+from qrcode.image.svg import SvgPathImage
 import io
 import base64
 
@@ -15,14 +16,22 @@ qr_collection = db.qrcodes
 
 # QR 코드 생성 함수
 def generate_qr(data):
+    # PNG 생성
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(data)
     qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    img_buffer = io.BytesIO()
-    img.save(img_buffer)  # 'format' 인자 제거
-    img_str = base64.b64encode(img_buffer.getvalue()).decode()
-    return img_str
+    png_img = qr.make_image(fill_color="black", back_color="white")
+    png_buffer = io.BytesIO()
+    png_img.save(png_buffer)
+    png_str = base64.b64encode(png_buffer.getvalue()).decode()
+
+    # SVG 생성
+    svg_img = qr.make_image(image_factory=SvgPathImage)
+    svg_buffer = io.BytesIO()
+    svg_img.save(svg_buffer)
+    svg_str = svg_buffer.getvalue().decode()
+
+    return png_str, svg_str
 
 @app.route('/')
 def home():
@@ -32,9 +41,17 @@ def home():
 def register():
     if request.method == 'POST':
         title = request.form['title']
-        data = request.form['data']
-        qr_image = generate_qr(data)
-        qr_id = qr_collection.insert_one({'title': title, 'data': data, 'image': qr_image}).inserted_id
+        url = request.form['url']
+        qr_id = ObjectId()  # 새로운 ObjectId 생성
+        qr_url = url_for('redirect_qr', qr_id=str(qr_id), _external=True)
+        png_image, svg_image = generate_qr(qr_url)
+        qr_collection.insert_one({
+            '_id': qr_id,
+            'title': title,
+            'url': url,
+            'png_image': png_image,
+            'svg_image': svg_image
+        })
         flash('QR 코드가 성공적으로 등록되었습니다.', 'success')
         return redirect(url_for('list_qr_codes'))
     return render_template('register.html')
@@ -51,6 +68,58 @@ def delete_qr(qr_id):
         flash('QR 코드가 성공적으로 삭제되었습니다.', 'success')
     else:
         flash('QR 코드 삭제에 실패했습니다.', 'error')
+    return redirect(url_for('list_qr_codes'))
+
+@app.route('/download/<string:qr_id>/<string:format>')
+def download_qr(qr_id, format):
+    qr_code = qr_collection.find_one({'_id': ObjectId(qr_id)})
+    if qr_code:
+        if format == 'png':
+            image_data = base64.b64decode(qr_code['png_image'])
+            mimetype = 'image/png'
+            extension = 'png'
+        elif format == 'svg':
+            image_data = qr_code['svg_image'].encode()
+            mimetype = 'image/svg+xml'
+            extension = 'svg'
+        else:
+            flash('잘못된 형식입니다.', 'error')
+            return redirect(url_for('list_qr_codes'))
+
+        return send_file(
+            io.BytesIO(image_data),
+            mimetype=mimetype,
+            as_attachment=True,
+            download_name=f"{qr_code['title']}.{extension}"
+        )
+    flash('QR 코드를 찾을 수 없습니다.', 'error')
+    return redirect(url_for('list_qr_codes'))
+
+@app.route('/edit/<string:qr_id>', methods=['GET', 'POST'])
+def edit_qr(qr_id):
+    qr_code = qr_collection.find_one({'_id': ObjectId(qr_id)})
+    if not qr_code:
+        flash('QR 코드를 찾을 수 없습니다.', 'error')
+        return redirect(url_for('list_qr_codes'))
+
+    if request.method == 'POST':
+        title = request.form['title']
+        url = request.form['url']
+        qr_collection.update_one(
+            {'_id': ObjectId(qr_id)},
+            {'$set': {'title': title, 'url': url}}
+        )
+        flash('QR 코드가 성공적으로 수정되었습니다.', 'success')
+        return redirect(url_for('list_qr_codes'))
+
+    return render_template('edit.html', qr=qr_code)
+
+@app.route('/qr/<string:qr_id>')
+def redirect_qr(qr_id):
+    qr_code = qr_collection.find_one({'_id': ObjectId(qr_id)})
+    if qr_code:
+        return redirect(qr_code['url'])
+    flash('QR 코드를 찾을 수 없습니다.', 'error')
     return redirect(url_for('list_qr_codes'))
 
 if __name__ == '__main__':
