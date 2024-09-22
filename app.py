@@ -5,13 +5,20 @@ import qrcode
 from qrcode.image.svg import SvgPathImage
 import io
 import base64
+from dotenv import load_dotenv
+import os
+
+# .env 파일 로드
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # 이 키를 안전한 랜덤 문자열로 변경하세요
+app.secret_key = os.getenv('FLASK_SECRET_KEY')
 
-# MongoDB 연결
-client = MongoClient("mongodb://hangom:BoardLive99!@222.109.213.58:27017/boardlive?authSource=admin")
-db = client.boardlive
+# MongoDB 연결 문자열 구성
+mongo_uri = f"mongodb://{os.getenv('MONGO_USERNAME')}:{os.getenv('MONGO_PASSWORD')}@{os.getenv('MONGO_HOST')}:{os.getenv('MONGO_PORT')}/{os.getenv('MONGO_DB')}?authSource=admin"
+
+client = MongoClient(mongo_uri)
+db = client[os.getenv('MONGO_DB')]
 qr_collection = db.qrcodes
 
 # QR 코드 생성 함수
@@ -83,7 +90,7 @@ def download_qr(qr_id, format):
             mimetype = 'image/svg+xml'
             extension = 'svg'
         else:
-            flash('잘못된 형식입니다.', 'error')
+            flash('잘못된 ��식입니다.', 'error')
             return redirect(url_for('list_qr_codes'))
 
         return send_file(

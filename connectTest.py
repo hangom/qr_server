@@ -1,4 +1,6 @@
 from pymongo import MongoClient
+import os
+print(os.urandom(24).hex())
 
 uri = "mongodb://hangom:BoardLive99!@222.109.213.58:27017/boardlive?authSource=admin"
 client = MongoClient(uri)
